@@ -1,155 +1,379 @@
-# Hope-Robot
+# Relatório - Robótica
 
-## Visão Geral do Projeto
+## Projeto de Robô Auxiliar para Idosos Controlado via Bluetooth
 
-Este repositório documenta o processo de desenvolvimento de um **Robô 2WD** (Two-Wheel Drive) autônomo, concebido especificamente para auxiliar idosos em tarefas cotidianas, como o transporte de pequenos itens essenciais (ex: medicamentos) dentro de suas residências. O projeto integra conceitos de robótica móvel, programação embarcada e simulação de sistemas robóticos. Desenvolvido como parte do projeto final da disciplina de Robótica, este trabalho abrange todas as etapas, desde o planejamento e montagem física até a implementação de algoritmos de navegação e a validação do sistema em ambiente simulado.
+**Relatório Final da Disciplina de Elementos de Robótica da Universidade de Pernambuco (Graduação em Engenharia da Computação).**
 
-## Funcionalidades Principais
+### Componentes:
+- Aline Soares  
+- Caio Victor  
+- Lucas Muniz  
+- Marcos Prudêncio  
+- Joel Medeiros  
+- Sarah Alves  
 
-* **Transporte de Pequenos Itens:** Capacidade primária de carregar e mover objetos leves, visando a autonomia de idosos.
-* **Montagem e Prototipagem:** Desenvolvimento e integração do chassi 2WD com todos os componentes eletrônicos e mecânicos essenciais.
-* **Simulação em CoppeliaSim:** Modelagem tridimensional detalhada do robô e do ambiente de teste. A simulação permite o desenvolvimento e a validação de algoritmos de controle e navegação antes da implementação no hardware físico.
-* **Navegação Inteligente:** Implementação de um algoritmo de otimização de rotas (como PSO - Particle Swarm Optimization ou similar) para permitir que o robô encontre os caminhos mais eficientes para seus destinos.
-* **Controle Interativo via UI:** Interface de usuário (UI) desenvolvida diretamente no CoppeliaSim, proporcionando controle manual intuitivo sobre a velocidade linear e angular do robô, além de comandos diretos de movimentação.
-* **Testes e Validação Rigorosos:** Realização de testes comparativos entre o comportamento do robô no ambiente real e na simulação. Validação das funcionalidades (busca e transporte de objetos) em cenários controlados, como labirintos simples.
-* **Pinça/Gripper:** Incorporação de uma pinça (`MicoHand`) para potencial manipulação e transporte de objetos, com seu projeto e calibração sendo parte integrante do desenvolvimento.
+---
 
-## Tecnologias Utilizadas
+## 1. Introdução: Propósito Geral do Projeto e da Disciplina
 
-### Hardware
+Este relatório documenta o processo de desenvolvimento de um protótipo de robô assistivo, realizado no âmbito da disciplina de Elementos de Robótica. O objetivo central foi aplicar os conceitos teóricos de modelagem e controle de robôs em um projeto prático, desde a simulação inicial no ambiente do CoppeliaSim até a construção de um protótipo físico.
 
-* **Chassi:** Plataforma robótica 2WD.
-* **Locomoção:** Motores de corrente contínua e rodas, incluindo um rodízio (caster_wheel) para estabilidade e manobrabilidade.
-* **Controle:** Microcontrolador (Arduino) como cérebro do robô.
-* **Sensores:**
-    * **Proximity Sensor (Sonar):** Essencial para detecção de obstáculos e medição de distâncias, crucial para a navegação autônoma.
-    * **Vision Sensor:** Para percepção visual do ambiente e possíveis tarefas de reconhecimento.
-    * **TCRF5000:** Sensor adicional que pode ser utilizado para seguir linhas ou detecção de proximidade mais específica.
-* **Atuadores Adicionais:** Servos para controle de rodas e do gripper, e um buzzer para sinalização sonora.
-* **Alimentação:** Powerbank para fornecer energia ao sistema.
-* **Comunicação:** Módulo Bluetooth para comunicação sem fio.
-* **Manipulador:** Pinça (`MicoHand`) com junta controlável (`gripper_joint`).
+O projeto partiu do conceito de um robô autônomo para entrega de medicamentos a idosos. No decorrer do desenvolvimento, o escopo foi estrategicamente adaptado para um sistema teleoperado via Bluetooth, visando maximizar o aprendizado prático e garantir a entrega minimamente viável. Este documento detalha a metodologia, as decisões que guiaram essa transição, os resultados e desafios obtidos.
 
-### Software e Ambiente de Simulação
+---
 
-* **CoppeliaSim:** Ambiente de simulação robusto utilizado para modelagem, programação e teste do robô virtualmente.
-    * **Arquivos de Cena (.ttt):** Contêm o modelo 3D do robô (`DYOR_robot.ttt`) com todos os seus componentes (rodas, sensores, gripper, etc.) e as cenas de teste, incluindo ambientes como labirintos e objetos de interação (como a cesta rosa).
-* **Linguagem de Scripting Lua:** Utilizada extensivamente dentro do CoppeliaSim para programar a lógica de controle, simulação de sensores, atuação dos motores e a interface de usuário.
-* **Algoritmo de Otimização:** Implementação de um algoritmo como o Particle Swarm Optimization (PSO) para otimização de rotas.
+## 2. Problema a Ser Resolvido 
 
-## Detalhes do Controle e Simulação (CoppeliaSim Script)
+### 2.1 Desafios Enfrentados por Pessoas Idosas no Acesso a Medicamentos
 
-O script Lua integrado ao CoppeliaSim é o coração da lógica de controle do robô, gerenciando a movimentação, a leitura de sensores e a interação com uma interface de usuário personalizada.
+O envelhecimento populacional traz a necessidade de desenvolver soluções que garantam a autonomia e a segurança da população idosa, especialmente daqueles que vivem sozinhos. Um dos desafios mais significativos nesta fase da vida é a mobilidade reduzida. O projeto busca mitigar esse problema específico, oferecendo uma ferramenta para o transporte de pequenos objetos dentro de casa.
 
-### Parâmetros e Componentes Iniciais (`sysCall_init`):
-Na inicialização da simulação, o script define parâmetros físicos do robô e obtém referências para os objetos da cena, garantindo que o software interaja corretamente com o modelo virtual:
-* `sonar`: Handle para o sensor de proximidade (`/proximitySensor`).
-* `gripper_joint`: Handle para a junta principal do gripper (`../gripper_joint`).
-* `left_wheel`, `right_wheel`: Handles para as juntas das rodas (`:/l_wheel_joint`, `:/r_wheel_joint`).
-* `wheel_radius`: Raio das rodas (0.03 metros).
-* `max_speed`: Velocidade linear máxima do robô (0.2 m/s).
-* `max_turn`: Velocidade angular máxima do robô (0.3 rad/s).
-* `b`: Distância entre o centro do robô e o eixo das rodas (0.0565 metros), crucial para cálculos de cinemática diferencial.
-* `max_dist`: Distância máxima que o sensor de proximidade consegue detectar (1 metro).
-* O gripper é inicializado com velocidade zero e uma força de 1000 N, indicando uma configuração para mantê-lo em uma posição fixa inicial.
+### 2.2 Como o Robô Pode Ajudar
 
-### Funções de Movimentação (`move`, `moveForward`, etc.):
-O script oferece um conjunto de funções para controlar o robô, convertendo comandos de alto nível em velocidades específicas para as juntas das rodas:
-* `move(v, w)`: Função central que ajusta as velocidades angulares das rodas esquerda e direita com base na velocidade linear desejada (`v`) e na velocidade angular (`w`) do robô. A cinemática diferencial é aplicada aqui:
-    * `sim.setJointTargetVelocity(left_wheel, (v - b * w) / wheel_radius)`
-    * `sim.setJointTargetVelocity(right_wheel, (v + b * w) / wheel_radius)`
-* `moveForward()`: Move o robô para frente com uma velocidade linear de 75% da `max_speed`.
-* `moveBackwards()`: Move o robô para trás com 75% da `max_speed`.
-* `turnLeft()`: Faz o robô girar para a esquerda (roda esquerda para trás, roda direita para frente).
-* `turnRight()`: Faz o robô girar para a direita (roda esquerda para frente, roda direita para trás).
-* `stop()`: Para o movimento do robô, zerando as velocidades das rodas.
+- **Controle pelo Usuário:** Interface simples via smartphone com comandos Bluetooth.  
+- **Transporte de Objetos:** Equipado com pinça para carregar medicamentos.  
+- **Segurança Adicional:** Sensores ultrassônicos para prevenir colisões.
 
-### Leitura de Sensores (`getDistance`, `sysCall_sensing`):
-A percepção do ambiente é feita através do sensor de proximidade:
-* `getDistance(sensor, max_dist)`: Função que lê o sensor de proximidade especificado. Retorna a distância detectada. Se o sensor não detectar nada, retorna a `max_dist` pré-definida.
-* `sysCall_sensing()`: Esta função é chamada a cada passo de simulação e é responsável por atualizar a variável global `dist` com a leitura mais recente do sensor `sonar`.
+---
 
-### Interface de Usuário (UI) no CoppeliaSim:
-Uma UI interativa é criada na inicialização (`sysCall_init`) para facilitar o teste e a depuração manual do robô:
-* **Sliders:** Permitem o ajuste em tempo real da "Linear Speed" e "Angular Speed", variando de -100 a 100, que são mapeadas para as funções `onSpeedChange` e `onTurnChange`, respectivamente.
-    * `onSpeedChange(uiHandle, id, newValue)`: Atualiza a velocidade linear do robô.
-    * `onTurnChange(uiHandle, id, newValue)`: Atualiza a velocidade angular do robô.
-* **Botões de Comando:**
-    * "Forward", "Backwards", "Left", "Right", "Stop": Cada botão aciona a respectiva função de movimento do robô.
+## 3. Funcionalidades Esperadas
 
-### Lógica de Controle (Exemplo Comentado no Script):
-O script fornecido inclui um bloco de código `sysCall_actuation` que está comentado. Este bloco ilustra uma lógica de controle reativo simples, onde o robô moveria para frente se a distância do sensor fosse maior que 0.6 metros, e viraria à direita caso contrário, evitando obstáculos. Este serve como um ponto de partida para algoritmos de navegação mais complexos.
+### 3.1 Movimentação
+Movimentação via Bluetooth com controle do usuário, substituindo a ideia inicial de navegação autônoma.
 
-## Cronograma Detalhado do Desenvolvimento
+### 3.2 Detecção de Obstáculos
+Sensor ultrassônico frontal para prevenir colisões durante a movimentação.
 
-O projeto foi planejado para ser executado em 7 semanas, com marcos e dependências claras:
+### 3.3 Coleta de Remédio com Pinça
+Pinça frontal para manipular caixas de medicamentos.  
+**Limitação:** Baixa aderência da garra dificultou a fixação firme dos objetos.
 
-* **Semana 1: Planejamento e Início da Prototipagem**
-    * Pedido do chassi (entrega em 3 dias).
-    * Recebimento e catalogação dos componentes (motores, sensores, microcontrolador, bateria, etc.).
-    * Início da prototipagem do sistema elétrico e testes de componentes individuais.
-    * Simulações iniciais no CoppeliaSim, incluindo a modelagem básica do robô e do ambiente de testes.
-    * **Dependências:** A prototipagem elétrica só avança após a chegada dos componentes. As simulações podem ser feitas em paralelo.
+### 3.4 Controle via Bluetooth
+Módulo Bluetooth conectado ao Arduino, com controle via smartphone Android.
 
-* **Semana 2: Prototipagem Elétrica e Projeto da Pinça** 
-    * Finalização da prototipagem elétrica, com todas as conexões testadas e validadas.
-    * Avanço nas simulações do CoppeliaSim, com foco na movimentação básica do robô.
-    * Desenvolvimento do projeto da pinça (desenho para impressão 3D).
-    * **Dependências:** Escolha do modelo da pinça para impressão e liberação para iniciar a impressão.
+---
 
-* **Semana 3: Montagem Física e Simulação Avançada**
-    * Montagem física completa do robô, incluindo a fixação de motores, sensores e controladores.
-    * Realização de testes básicos de movimentação (frente, ré, curvas).
-    * Finalização da simulação no CoppeliaSim, integrando a lógica de navegação.
-    * Impressão 3D da pinça (se aplicável).
-    * **Dependências:** A montagem física depende diretamente da chegada do chassi e de todos os componentes.
+## 4. Materiais Utilizados
 
-* **Semana 4: Integração Lógica e Início do Algoritmo de Rota** 
-    * Integração total do sistema elétrico com a lógica de controle, programando o microcontrolador para a movimentação completa do robô.
-    * Realização de testes comparativos entre a movimentação do robô físico e a simulação, buscando ajustes finos.
-    * Início da implementação do algoritmo de otimização de rota (PSO ou similar).
-    * **Dependências:** O algoritmo de rota depende da movimentação básica do robô estar plenamente funcional.
+### 4.1 Componentes de Hardware
 
-* **Semana 5: Otimização de Rota e Validação Funcional** 
-    * Testes do algoritmo de otimização de rota em cenários de labirintos simples.
-    * Ajustes na pinça, caso haja necessidade de melhorias de funcionalidade.
-    * Validação de todas as funcionalidades do robô, como a busca e o transporte de um objeto simulado.
-    * **Dependências:** Os testes dependem do algoritmo de otimização estar completamente implementado e funcional.
+#### 4.1.1 Componentes Eletrônicos
+- Arduino Uno  
+- Driver Ponte H  
+- Sensor Ultrassônico  
+- Micro Servo Motor  
+- Módulo Bluetooth  
+- Protoboard  
+- Jumpers  
+- Clip de Bateria  
 
-* **Semana 6: Testes Finais e Documentação** 
-    * Realização de testes finais abrangentes, combinando a navegação em labirintos com a otimização de rota.
-    * Ajustes finais no código e no hardware, focando na eficiência da bateria e dos sensores.
-    * Início da preparação da documentação final do projeto (relatório técnico, vídeo de demonstração, slides de apresentação).
-    * **Dependências:** Esta semana é crucial para correções de falhas detectadas nos testes.
+#### 4.1.2 Componentes Mecânicos
+- Chassi 2WD com motores  
+- Pinça Robótica (3D)  
+- Rodas e roda maluca  
+- Suporte para sensor  
+- Fita dupla face, parafusos, porcas  
 
-* **Semana 7: Preparação para a Apresentação Final** 
-    * Foco total na preparação da apresentação final, incluindo a revisão dos slides e o planejamento da demonstração ao vivo do robô.
-    * Últimos ajustes estéticos (opcional).
-    * **Dependências:** Sem dependências críticas, mas atrasos acumulados impactam diretamente a demonstração e a validação do projeto.
+### 4.2 Fontes de Energia
+- Porta USB  
+- Pilhas AA  
+- Bateria 9V  
 
-## Como Rodar/Simular
+### 4.3 Ferramentas de Software
+- CoppeliaSim  
+- Arduino IDE  
 
-### Pré-requisitos:
+---
 
-* **CoppeliaSim:** Certifique-se de ter o CoppeliaSim instalado em sua máquina. A versão utilizada no projeto deve ser compatível com os arquivos de cena (`.ttt`) fornecidos.
+## 5. Cronograma Planejado
 
-### Para Simular no CoppeliaSim:
+| Semana | Atividades |
+|--------|------------|
+| 1 | Aquisição dos componentes e início da simulação |
+| 2 | Finalização da prototipagem elétrica e projeto da pinça |
+| 3 | Montagem do robô e testes básicos |
+| 4 | Integração software-hardware e início do algoritmo de rota |
+| 5 | Testes no labirinto e ajustes na pinça |
+| 6 | Testes finais e documentação |
+| 7 | Preparação para apresentação final |
 
-1.  **Clone o Repositório:** Faça um clone deste repositório para o seu computador.
-    ```bash
-    git clone [https://github.com/SeuUsuario/Hope-Robot.git](https://github.com/SeuUsuario/Hope-Robot.git)
-    cd Hope-Robot/coppeliasim
-    ```
-2.  **Abra o Arquivo de Cena:** No CoppeliaSim, vá em `File -> Open scene...` e navegue até a pasta `coppeliasim/` do repositório clonado. Abra o arquivo `DYOR_robot.ttt`.
-3.  **Explore a Simulação:** Uma vez a cena carregada, você verá o modelo do robô, os ambientes de teste e a interface de usuário interativa.
-4.  **Inicie a Simulação:** Clique no botão de "Play" (geralmente um triângulo verde) na barra de ferramentas do CoppeliaSim para iniciar a simulação.
-5.  **Controle o Robô:** Utilize os sliders e botões da interface de usuário flutuante (intitulada "DYOR") para controlar o movimento do robô em tempo real dentro da simulação.
-6.  **Observe o Comportamento:** Acompanhe a interação do robô com o ambiente, observe a leitura dos sensores e o movimento do gripper.
+---
 
-## Equipe
+## 6. Metodologia de Desenvolvimento
 
-* Aline Soares 
-* Caio Victor 
-* Joel Medeiros 
-* Marcos Prudêncio 
-* Sarah Alves 
+### 6.1 Pesquisa e Definição do Robô
+Meta: robô 2WD auxiliar para idosos.
+
+### 6.2 Levantamento e Estudo dos Materiais
+Aquisição dos principais componentes logo na 1ª semana.
+
+### 6.3 Desenvolvimento Modular no CoppeliaSim
+#### 6.3.1 Simulação da Movimentação
+Movimento básico modelado no ambiente virtual.
+
+#### 6.3.2 Simulação da Pinça
+Modelo da pinça desenvolvido e integrado ao robô virtual.
+
+### 6.4 Integração das Funcionalidades no CoppeliaSim
+Simulação completa do robô no ambiente de testes.
+
+### 6.5 Montagem do Robô Físico
+Fixação de sensores, motores, rodas e microcontrolador.
+
+### 6.6 Integração com o Sistema Elétrico
+Programação do Arduino para controle dos componentes.
+
+### 6.7 Testes Práticos
+
+#### 6.8.1 Bluetooth
+Instabilidades detectadas nos testes finais.
+
+#### 6.8.2 Pinça
+Testes de manipulação com sucesso parcial.
+
+#### 6.8.3 Testes Combinados
+Testes finais com movimentação e pinça simultaneamente.
+
+---
+
+## 7. Resultados
+
+### 7.1 Simulação no CoppeliaSim
+
+#### 7.1.1 Funcionamento Alcançado
+Movimento básico, pinça funcional, sensor de obstáculos.  
+Navegação autônoma sem PSO foi parcialmente simulada com sucesso.
+
+#### 7.1.2 Imagens e Vídeos
+
+https://github.com/user-attachments/assets/0dff323c-bb53-4ab9-853d-4c5e0ddd8f56
+
+#### 7.1.3 Arquivos Relevantes
+
+Movimento robô
+
+```lua
+function onSpeedChange(uiHandle, id, newValue)
+    speed=newValue*max_speed/100
+    move(speed,turn)
+end
+function onTurnChange(uiHandle, id, newValue)
+    turn=newValue*max_turn/100
+    move(speed,turn)
+end
+
+function move(v,w)
+    sim.setJointTargetVelocity(left_wheel,(v-b*w)/wheel_radius)
+    sim.setJointTargetVelocity(right_wheel,(v+b*w)/wheel_radius)
+end
+function moveForward()
+    sim.setJointTargetVelocity(left_wheel,-0.75*max_speed/wheel_radius)
+    sim.setJointTargetVelocity(right_wheel,-0.75*max_speed/wheel_radius)
+end
+function moveBackwards()
+    sim.setJointTargetVelocity(left_wheel,0.75*max_speed/wheel_radius)
+    sim.setJointTargetVelocity(right_wheel,0.75*max_speed/wheel_radius)
+end
+function turnLeft()
+    sim.setJointTargetVelocity(left_wheel,-0.5*max_speed/wheel_radius)
+    sim.setJointTargetVelocity(right_wheel,0.5*max_speed/wheel_radius)
+end
+function turnRight()
+    sim.setJointTargetVelocity(left_wheel,0.5*max_speed/wheel_radius)
+    sim.setJointTargetVelocity(right_wheel,-0.5*max_speed/wheel_radius)
+end
+function stop()
+    sim.setJointTargetVelocity(left_wheel,0)
+    sim.setJointTargetVelocity(right_wheel,0)
+end
+function getDistance(sensor,max_dist)
+    local detected, distance
+    detected,distance = sim.readProximitySensor(sensor)
+    if(detected<1) then
+        distance = max_dist
+    end
+    return distance
+end
+function sysCall_init()
+    -- do some initialization here
+    sonar = sim.getObject('/proximitySensor')
+    gripper_joint = sim.getObject('../gripper_joint')  
+    left_wheel = sim.getObject(':/l_wheel_joint')
+    right_wheel = sim.getObject(':/r_wheel_joint')
+    wheel_radius=0.03
+    max_speed=0.2
+    max_turn=0.3
+    speed=0
+    turn=0
+    b=0.0565
+    max_dist=1
+    gripper_open=false
+    
+    sim.setJointTargetVelocity(gripper_joint, 0)
+    sim.setJointForce(gripper_joint, 1000)  -- for?a alta para travar
+    
+    ui=simUI.create('<ui enabled="true" modal="false" title="DYOR" closeable="true" layout="vbox" placement="relative" position="20,20">' ..
+    '<label enabled="true" text="Linear Speed"></label>' ..
+    '<hslider enabled="true" minimum="-100" maximum="100" on-change="onSpeedChange"></hslider>' ..
+    '<label enabled="true" text="Angular Speed"></label>' ..
+    '<hslider enabled="true" minimum="-100" maximum="100" on-change="onTurnChange"></hslider>' ..
+    '<button enabled="true" text="Forward" on-click="moveForward"></button>' ..
+    '<button enabled="true" text="Backwards" on-click="moveBackwards"></button>' ..
+    '<button enabled="true" text="Left" on-click="turnLeft"></button>' ..
+    '<button enabled="true" text="Right" on-click="turnRight"></button>' ..
+    '<button enabled="true" text="Stop" on-click="stop"></button>' ..
+    '</ui>')
+    
+    moveForward()
+end
+dist = 1
+
+--function sysCall_actuation()
+    --sim.setJointTargetVelocity(left_wheel,0)
+    --sim.setJointTargetVelocity(right_wheel,0)
+    --if dist < 0.6 then
+        --turnRight()
+    --else
+        --moveForward()
+    --end
+--end
+function sysCall_sensing()
+    dist = getDistance(sonar,max_dist)
+end
+function sysCall_cleanup()
+    -- do some clean-up here
+end
+```
+
+* Movimento da garra
+```lua
+function sysCall_init()
+    -- 1. PEGAR OS OBJETOS
+    -- Obtemos os "handles" (identificadores) dos objetos que vamos usar.
+    -- O './' significa que a busca ? relativa ao objeto que cont?m este script (MicoHand).
+    -- Baseado na sua hierarquia, o sensor est? dentro de um objeto 'sonar'.
+    sensorHandle = sim.getObject('/robot/proximitySensor')
+    motor1Handle = sim.getObject('/robot/fingers12_motor1')
+    motor2Handle = sim.getObject('/robot/fingers12_motor2')
+
+    -- 2. DEFINIR VELOCIDADES
+    -- Voc? pode ajustar estes valores para a garra fechar mais r?pido ou mais devagar.
+    velocidadeFechar = 0.008
+    velocidadeAbrir = 0.08
+
+    -- Mensagem de confirma??o no console do CoppeliaSim
+    print('Script da garra MicoHand iniciado. Aguardando objeto...')
+end
+
+-- Esta fun??o ? chamada em loop durante a simula??o
+function sysCall_actuation()
+    -- 3. LER O SENSOR
+    -- A fun??o retorna 1 se detectou algo, ou 0 se n?o detectou.
+    resultado = sim.readProximitySensor(sensorHandle)
+
+    -- 4. CONTROLAR A GARRA
+    -- Verificamos o resultado da leitura do sensor
+    if (resultado <= 0) then
+        -- Objeto detectado: FECHAR a garra.
+        -- Para fechar, um motor geralmente gira em um sentido (+) e o outro no sentido oposto (-).
+        sim.setJointTargetVelocity(motor1Handle, velocidadeFechar)
+        sim.setJointTargetVelocity(motor2Handle, -velocidadeFechar) -- ATEN??O: Sinal negativo!
+    else
+        -- Nenhum objeto detectado: ABRIR a garra.
+        -- Fazemos o movimento inverso ao de fechar.
+        sim.setJointTargetVelocity(motor1Handle, -velocidadeAbrir)
+        sim.setJointTargetVelocity(motor2Handle, velocidadeAbrir)
+    end
+end
+
+-- Esta fun??o ? chamada uma vez no final da simula??o
+function sysCall_cleanup()
+    -- Boa pr?tica: parar os motores ao final da simula??o.
+    sim.setJointTargetVelocity(motor1Handle, 0)
+    sim.setJointTargetVelocity(motor2Handle, 0)
+    print('Script da garra finalizado.')
+end
+```
+
+### 7.2 Robô Físico
+
+#### 7.2.1 Funcionamento Alcançado
+- Sucesso na montagem  
+- Controle via Bluetooth com instabilidades  
+- Pinça funcional  
+- Desafios na integração total das funcionalidades
+
+#### 7.2.2 Imagens e Vídeos
+
+* Ultrassonico com pinça
+  
+https://github.com/user-attachments/assets/0a450e2d-a8d3-495d-bf6f-72bf3a589409
+
+* Desenvolvimento no IIT
+  
+https://github.com/user-attachments/assets/86142566-a8a1-4abd-aca1-4136099c0e2a
+
+#### 7.2.3 Arquivos Relevantes
+
+* Garra
+```cpp
+#include <Servo.h>
+
+Servo myservo;  // create servo object to control a servo
+// twelve servo objects can be created on most boards
+
+int pos = 0;    // variable to store the servo position
+
+void setup() {
+  myservo.attach(9);  // attaches the servo on pin 9 to the servo oject
+}
+
+void loop() {
+  for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15 ms for the servo to reach the position
+  }
+  for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
+    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15 ms for the servo to reach the position
+  }
+}
+```
+
+---
+
+## 8. Desafios e Dificuldades
+
+### 8.1 Componentes com Problemas
+- Pontes H defeituosas  
+- Baterias descarregadas ou com defeito  
+
+### 8.2 Estrutura Física
+- Baixa tolerância nas peças 3D  
+- Fiação difícil de organizar  
+
+### 8.3 Integração e Conectividade
+- Falha no módulo Bluetooth  
+- Sensor ultrassônico parou de funcionar  
+- Sincronização de tarefas no Arduino foi desafiadora  
+
+### 8.4 Limitações Técnicas vs. Expectativas
+O escopo precisou ser simplificado de um robô autônomo para teleoperado.
+
+---
+
+## 9. Etapas Ainda em Aberto
+
+### 9.1 Otimização de Rotas
+Implementação de algoritmos como PSO permanece em aberto.
+
+### 9.2 Testes Finais Completos
+- Substituição de componentes com defeito  
+- Validação de sistema completo em ambiente real  
+
+---
+
+## 10. Conclusões
+
+O projeto proporcionou uma vivência completa no desenvolvimento de um robô real. Apesar das dificuldades técnicas e da simplificação do escopo original, o aprendizado em eletrônica, programação e gestão de projetos foi significativo. A experiência destacou a importância do planejamento e da resiliência em projetos de robótica.
